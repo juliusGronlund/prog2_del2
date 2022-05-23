@@ -76,6 +76,135 @@ public class Main extends Application {
             Alert alert = new Alert(Alert.AlertType.ERROR, "OpenHandler");
             alert.showAndWait();
         }
+
+
+
+        private void readCityLine(String data) {
+            int counter = 0;
+            String cityName = "";
+            String tempString = "";
+            double xCordinate = 0;
+            double yCordinate = 0;
+            StringBuilder cityStringBuilder = new StringBuilder();
+            StringBuilder cordinateStringBuilder = new StringBuilder();
+
+            for (int i = 0; i <= data.length() + 1; i++) {
+                if(counter == 3){
+                    listGraph.add(new City(cityName, xCordinate, yCordinate));
+
+                    cityName = "";
+                    xCordinate = 0;
+                    yCordinate = 0;
+                    counter = 0;
+                }
+
+                char character;
+
+                if(i < data.length()) {
+                    character = data.charAt(i);
+                }
+                //Detta för kompensera att det inte finns ett ; i slutet av raden.
+                else {
+                    character = ';';
+                }
+
+
+                if(character == ';'){
+                    if(counter == 0){
+                        cityName = cityStringBuilder.toString();
+                        cityStringBuilder.setLength(0);
+                    }
+
+                    tempString = cordinateStringBuilder.toString();
+                    if(counter == 1){
+                        xCordinate = Double.parseDouble(tempString);
+                    }
+
+                    if(counter == 2){
+                        yCordinate = Double.parseDouble(tempString);
+                    }
+                    cordinateStringBuilder.setLength(0);
+                    tempString = "";
+
+                    counter++;
+                } else {
+                    switch (counter){
+                        case 0:
+                            cityStringBuilder.append(cityName).append(character);
+                            break;
+                        case 1:
+                            cordinateStringBuilder.append(tempString).append(character);
+                            break;
+                        case 2:
+                            cordinateStringBuilder.append(tempString).append(character);
+                            break;
+                    }
+                }
+            }
+        }
+
+        private void readEdgeLine(String data){
+            String destinationCity = "";
+            String departureCity = "";
+            String transportName = "";
+            int weight = 0;
+            int counter = 0;
+            StringBuilder stringBuilder = new StringBuilder();
+
+            for (int i = 0; i <= data.length() + 1; i++) {
+                char character;
+
+                if(i < data.length()) {
+                    character = data.charAt(i);
+                }
+                //Detta för kompensera att det inte finns ett ; i slutet av raden.
+                else {
+                    character = ';';
+                }
+
+                if(character == ';'){
+                    switch(counter){
+                        case 0:
+                            departureCity = stringBuilder.toString();
+                            stringBuilder.setLength(0);
+                            break;
+                        case 1:
+                            destinationCity = stringBuilder.toString();
+                            stringBuilder.setLength(0);
+                            break;
+                        case 2:
+                            transportName = stringBuilder.toString();
+                            stringBuilder.setLength(0);
+                            break;
+                        case 3:
+                            weight = Integer.parseInt(stringBuilder.toString());
+                            stringBuilder.setLength(0);
+                            break;
+                    }
+                    counter++;
+                } else{
+                    switch(counter){
+                        case 0:
+                            stringBuilder.append(departureCity).append(character);
+                            break;
+                        case 1:
+                            stringBuilder.append(destinationCity).append(character);
+                            break;
+                        case 2:
+                            stringBuilder.append(transportName).append(character);
+                            break;
+                        case 3:
+                            stringBuilder.append(weight).append(character);
+                            break;
+                    }
+                }
+            }
+            System.out.println(departureCity + ", " + destinationCity + ", " + transportName + ", " + weight);
+        }
+
+        private void readImageLine(String data) {
+            System.out.println(data);
+        }
     }
 
     class SaveHandler implements EventHandler<ActionEvent> {
