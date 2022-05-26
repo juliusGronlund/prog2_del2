@@ -1,5 +1,4 @@
 import java.util.Objects;
-
 public class Edge<T> {
 
     private final T destination;
@@ -39,5 +38,4 @@ public class Edge<T> {
     public String toString() {
         return "till " + destination + " med " + name + " tar " + weight;
     }
-
 }

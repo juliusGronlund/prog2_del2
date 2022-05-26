@@ -1,21 +1,34 @@
 import javafx.application.Application;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.image.WritableImage;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.Line;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import javafx.scene.layout.Pane;
+import javafx.scene.control.ButtonBar.ButtonData;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.*;
 
@@ -27,9 +40,17 @@ public class Main extends Application {
     private BorderPane top;
     private ImageView imageView;
     private ListGraph<City> listGraph;
+    private Scene scene;
+    private Button newPlaceBtn;
+    private Button findPathBtn;
+    private Button showConnectionBtn;
+    private Button newConnectionBtn;
+    private Button changeConnectionBtn;
+    private CreateCityHandler createCityHandler;
 
     @Override
     public void start(Stage stage) throws Exception {
+        createCityHandler = new CreateCityHandler();
         listGraph = new ListGraph();
         pane = new Pane();
 
@@ -52,7 +73,7 @@ public class Main extends Application {
         root.setTop(top);
 
         // Mandatory code for start
-        Scene scene = new Scene(root);
+        scene = new Scene(root);
         stage.setScene(scene);
         stage.show();
     }
@@ -66,6 +87,9 @@ public class Main extends Application {
         @Override
         public void handle(ActionEvent actionEvent) {
             imageView = createMap();
+            pane.getChildren().add(imageView);
+            root.setCenter(pane);
+            changeButtonCondition(false);
         }
     }
 
@@ -74,13 +98,14 @@ public class Main extends Application {
         @Override
         public void handle(ActionEvent actionEvent) {
             try{
-                File file = new File("/Users/Julius/Documents/IntelliJProjects/prog2_del2/src/europa.graph");
+                File file = new File("/home/gustavwalter/Documents/prog2_del2/src/europa.graph");
                 FileReader fr = new FileReader(file);
                 BufferedReader br = new BufferedReader(fr);
 
                 imageView = createMap();
                 pane.getChildren().add(imageView);
                 root.setCenter(pane);
+                changeButtonCondition(false);
 
                 String data;
                 String[] nodeInfo = null;
@@ -145,29 +170,28 @@ public class Main extends Application {
 
                                 if(temp.getName().equals(city1Name)) {
                                     city1 = temp;
-                                    System.out.println("1 " + city1.getName());
                                 }
                                 if(temp.getName().equals(city2Name)){
                                     city2 = temp;
-                                    System.out.println("2 " + city2.getName());
                                 }
                                 if(city1 != null && city2 != null) {
-                                    System.out.println("city1 != null && city2 != null");
-                                    listGraph.connect(city1, city2, edgeName, weight);
-                                }
-                            }
 
-                            /*
-                            Set<City> set = listGraph.getNodes();
-                            for(City temp : set){
-                                if(temp.getName().equals(city1Name)){
-                                    city1 = temp;
-                                }
-                                if(temp.getName().equals(city2Name)){
-                                    city2 = temp;
+                                    //System.out.println(listGraph);
+                                    if(listGraph.getEdgeBetween(city1, city2) == null){
+                                        listGraph.connect(city1, city2, edgeName, weight);
+
+                                        // Skapa linje
+                                        Line line = new Line(city1.getxCordinate(), city1.getyCordinate(), city2.getxCordinate(), city2.getyCordinate());
+                                        line.setFill(Color.BLACK);
+                                        line.setStrokeWidth(3);
+                                        line.setDisable(true);
+
+                                        pane.getChildren().add(line);
+                                    }
+                                    System.out.println("Created connection between " + city1 + " and " + city2);
+                                    break;
                                 }
                             }
-                             */
                         }
                     }
                     lineCounter++;
@@ -195,8 +219,14 @@ public class Main extends Application {
     class SaveImageHandler implements EventHandler<ActionEvent> {
         @Override
         public void handle(ActionEvent actionEvent) {
-            Alert alert = new Alert(Alert.AlertType.ERROR, "SaveImageHandler");
-            alert.showAndWait();
+            try {
+                WritableImage screenShot = root.snapshot(null, null);
+                BufferedImage bufferedScreenShot = SwingFXUtils.fromFXImage(screenShot, null);
+                ImageIO.write(bufferedScreenShot, "png", new File("src/capture.png"));
+            } catch(IOException ioe) {
+                Alert ioImageAlert = new Alert(Alert.AlertType.ERROR, "IO-error!" + ioe.getMessage());
+                ioImageAlert.showAndWait();
+            }
         }
     }
 
@@ -225,8 +255,10 @@ public class Main extends Application {
     class NewPlaceHandler implements EventHandler<ActionEvent> {
         @Override
         public void handle(ActionEvent actionEvent) {
-            Alert alert = new Alert(Alert.AlertType.ERROR, "NewPlaceHandler");
-            alert.showAndWait();
+            scene.setCursor(Cursor.CROSSHAIR);
+            newPlaceBtn.setDisable(true);
+            scene.setOnMouseClicked(createCityHandler);
+
         }
     }
 
@@ -246,20 +278,50 @@ public class Main extends Application {
         }
     }
 
+    class CreateCityHandler implements EventHandler<MouseEvent> {
+        @Override
+        public void handle(MouseEvent event) {
+            System.out.println(event.getX());
+            System.out.println(event.getY());
+            // Skapa cirkel
+            Circle circleForCity = new Circle();
+            circleForCity.setCenterX(event.getX());
+            circleForCity.setCenterY(event.getY());
+            circleForCity.setRadius(10.0f);
+            circleForCity.setFill(Color.BLUE);
+
+            // Skapa label
+            Label label = new Label("Test");
+            label.setLayoutX(event.getX() - 10);
+            label.setLayoutY(event.getY() + 10);
+
+            // Lägg till label och cirkel i pane
+            pane.getChildren().add(label);
+            pane.getChildren().add(circleForCity);
+        }
+    }
+
 
     ///////////////////////////////////////
     //////////// Help methods /////////////
     ///////////////////////////////////////
+    private boolean hasUnsavedChanges(){
+        if(imageView == null){
+            return false;
+        } else{
+            return true;
+        }
+    }
+
     private ImageView createMap(){
         double rootHeight = root.getHeight();
-        Image map = new Image("file:/Users/Julius/Documents/IntelliJProjects/prog2_del2/src/europa.gif");
+        Image map = new Image("file:///home/gustavwalter/Documents/prog2_del2/src/europa.gif");
         imageView = new ImageView(map);
-        root.setCenter(imageView);
 
         // Change window size so map fits
         // Detta måste vi fixa så att det inte är hårdkodat
         double mapWidth = map.getWidth();
-        double mapHeight = map.getHeight() + rootHeight + 30;
+        double mapHeight = map.getHeight() + 120;
 
         stage.setWidth(mapWidth);
         stage.setHeight(mapHeight);
@@ -298,14 +360,25 @@ public class Main extends Application {
         return vboxMenu;
     }
 
+    private void changeButtonCondition(boolean value){
+        findPathBtn.setDisable(value);
+        showConnectionBtn.setDisable(value);
+        newPlaceBtn.setDisable(value);
+        newConnectionBtn.setDisable(value);
+        changeConnectionBtn.setDisable(value);
+    }
+
     private HBox createButtonPane(){
         HBox hboxButtons = new HBox();
 
-        Button findPathBtn = new Button("Find Path");
-        Button showConnectionBtn = new Button("Show Connection");
-        Button newPlaceBtn = new Button("New Place");
-        Button newConnectionBtn = new Button("New Connection");
-        Button changeConnectionBtn = new Button("Change Connection");
+        findPathBtn = new Button("Find Path");
+        showConnectionBtn = new Button("Show Connection");
+        newPlaceBtn = new Button("New Place");
+        newConnectionBtn = new Button("New Connection");
+        changeConnectionBtn = new Button("Change Connection");
+
+        // Stänger av alla knappar
+        changeButtonCondition(true);
 
         findPathBtn.setOnAction(new FindPathHandler());
         showConnectionBtn.setOnAction(new ShowConnectionHandler());

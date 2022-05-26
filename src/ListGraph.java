@@ -18,9 +18,7 @@ public class ListGraph<T> implements Graph<T> {
             throw new IllegalArgumentException();
         }
 
-        //Edgen ska inte finnas när vi går in i den här metoden, men det gör den
-        if(getEdgeBetween(node1, node2) != null) {
-            System.out.println(nodes);
+        if(getEdgeBetween(node1, node2) != null){
             throw new IllegalStateException();
         }
 
@@ -69,7 +67,6 @@ public class ListGraph<T> implements Graph<T> {
         }
         for (Edge<T> edge : nodes.get(node1)) {
             if(edge.getDestination().equals(node2)) {
-                System.out.println("getEdgeBetween returns edge - " + edge.getName());
                 return edge;
             }
         }
@@ -91,7 +88,6 @@ public class ListGraph<T> implements Graph<T> {
 
         nodes.get(node1).remove(firstEdgeBetween);
         nodes.get(node2).remove(secondEdgeBetween);
-        // Dubbelchecka med G40
     }
 
     @Override
@@ -161,5 +157,4 @@ public class ListGraph<T> implements Graph<T> {
         }
         return Collections.unmodifiableList(path);
     }
-
 }
