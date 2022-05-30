@@ -21,7 +21,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-import javafx.scene.control.ButtonBar.ButtonData;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -203,8 +202,26 @@ public class Main extends Application {
     class SaveHandler implements EventHandler<ActionEvent> {
         @Override
         public void handle(ActionEvent actionEvent) {
-            Alert alert = new Alert(Alert.AlertType.ERROR, "SaveHandler");
-            alert.showAndWait();
+            Set nodes = listGraph.getNodes();
+            Iterator<City> nodesIterator = nodes.iterator();
+                try {
+                    File file = new File("/home/gustavwalter/Documents/prog2_del2/src/europa.graph");
+                    FileWriter myWriter = new FileWriter(file);
+                    myWriter.write("file:" + file.getName() + "\n");
+
+                    // Create nodes on line 2
+                    while(nodesIterator.hasNext()) {
+                        City city = nodesIterator.next();
+                        myWriter.write(city.getName() + ";" + city.getxCordinate() + ";" + city.getyCordinate() + ";");
+                    }
+
+                    // Get edges and create them
+
+
+                    myWriter.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
         }
     }
 
