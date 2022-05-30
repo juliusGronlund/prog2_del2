@@ -52,12 +52,14 @@ public class Main extends Application {
         createCityHandler = new CreateCityHandler();
         listGraph = new ListGraph();
         pane = new Pane();
+        pane.setId("outputArea");
 
         // Move stage to global variable
         this.stage = stage;
 
         // Create menu from help method createMenu()
         VBox vboxMenu = createMenu();
+        vboxMenu.setId("menuFile");
         HBox hboxButtons = createButtonPane();
 
         // Create BorderPanes for layout
@@ -128,6 +130,7 @@ public class Main extends Application {
 
                             // Skapa staden
                             City city = new City(stad, xCordinate, yCordinate);
+                            city.setId(city.getName());
                             city.setOnMouseClicked(new MakeCityClickable());
                             listGraph.add(city);
 
@@ -216,7 +219,16 @@ public class Main extends Application {
                     }
 
                     // Get edges and create them
+                    myWriter.write("\n");
 
+                    nodesIterator = nodes.iterator();
+                    while(nodesIterator.hasNext()) {
+                        City city = nodesIterator.next();
+                        Collection<Edge<City>> edges = listGraph.getEdgesFrom(city);
+                        for(Edge edge : edges){
+                            myWriter.write(city.getName() + ";" + edge.getDestination() + ";" + edge.getName() + ";" + edge.getWeight() + "\n");
+                        }
+                    }
 
                     myWriter.close();
                 } catch (IOException e) {
@@ -443,6 +455,7 @@ public class Main extends Application {
                 label.setLayoutY(event.getY() + 10);
 
                 City city = new City(result.get(), event.getX(), event.getY());
+                city.setId(city.getName());
                 city.setOnMouseClicked(new MakeCityClickable());
                 listGraph.add(city);
 
@@ -533,24 +546,31 @@ public class Main extends Application {
         menuBar.getMenus().add(archiveMenu);
 
         MenuItem newMapItem = new MenuItem("New Map");
+        newMapItem.setId("menuNewMap");
         archiveMenu.getItems().add(newMapItem);
         newMapItem.setOnAction(new NewMapHandler());
 
         MenuItem openItem = new MenuItem("Open");
+        openItem.setId("menuOpenFile");
         archiveMenu.getItems().add(openItem);
         openItem.setOnAction(new OpenHandler());
 
         MenuItem saveItem = new MenuItem("Save");
+        saveItem.setId("menuSaveFile");
         archiveMenu.getItems().add(saveItem);
         saveItem.setOnAction(new SaveHandler());
 
         MenuItem saveImageItem = new MenuItem("Save Image");
+        saveImageItem.setId("menuSaveImage");
         archiveMenu.getItems().add(saveImageItem);
         saveImageItem.setOnAction(new SaveImageHandler());
 
         MenuItem exitItem = new MenuItem("Exit");
+        exitItem.setId("menuExit");
         archiveMenu.getItems().add(exitItem);
         exitItem.setOnAction(new ExitHandler());
+
+        menuBar.setId("menu");
 
         return vboxMenu;
     }
@@ -567,10 +587,15 @@ public class Main extends Application {
         HBox hboxButtons = new HBox();
 
         findPathBtn = new Button("Find Path");
+        findPathBtn.setId("btnFindPath");
         showConnectionBtn = new Button("Show Connection");
+        showConnectionBtn.setId("btnShowConnection");
         newPlaceBtn = new Button("New Place");
+        newPlaceBtn.setId("btnNewPlace");
         newConnectionBtn = new Button("New Connection");
+        newConnectionBtn.setId("btnNewConnection");
         changeConnectionBtn = new Button("Change Connection");
+        changeConnectionBtn.setId("btnChangeConnection");
 
         // Stänger av alla knappar
         changeButtonCondition(true);
