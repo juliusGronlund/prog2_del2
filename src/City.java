@@ -1,11 +1,16 @@
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+
 import java.util.Objects;
 
-public class City {
+public class City extends Circle {
     private final String name;
     private final double xCordinate;
     private final double yCordinate;
 
     public City(String name, double xCordinate, double yCordinate) {
+        super(xCordinate, yCordinate, 10);
+        this.setFill(Color.BLUE);
         this.name = name;
         this.xCordinate = xCordinate;
         this.yCordinate = yCordinate;

@@ -16,15 +16,11 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-import javafx.scene.layout.Pane;
 import javafx.scene.control.ButtonBar.ButtonData;
 
 import javax.imageio.ImageIO;
@@ -47,6 +43,10 @@ public class Main extends Application {
     private Button newConnectionBtn;
     private Button changeConnectionBtn;
     private CreateCityHandler createCityHandler;
+    private City cityFrom;
+    private City cityTo;
+    private TextField nameField;
+    private TextField timeField;
 
     @Override
     public void start(Stage stage) throws Exception {
@@ -90,6 +90,7 @@ public class Main extends Application {
             pane.getChildren().add(imageView);
             root.setCenter(pane);
             changeButtonCondition(false);
+
         }
     }
 
@@ -128,14 +129,8 @@ public class Main extends Application {
 
                             // Skapa staden
                             City city = new City(stad, xCordinate, yCordinate);
+                            city.setOnMouseClicked(new MakeCityClickable());
                             listGraph.add(city);
-
-                            // Skapa cirkel
-                            Circle circleForCity = new Circle();
-                            circleForCity.setCenterX(xCordinate);
-                            circleForCity.setCenterY(yCordinate);
-                            circleForCity.setRadius(10.0f);
-                            circleForCity.setFill(Color.BLUE);
 
                             // Skapa label
                             Label label = new Label(stad);
@@ -144,7 +139,7 @@ public class Main extends Application {
 
                             // Lägg till label och cirkel i pane
                             pane.getChildren().add(label);
-                            pane.getChildren().add(circleForCity);
+                            pane.getChildren().add(city);
                         }
                     }
 
@@ -175,8 +170,6 @@ public class Main extends Application {
                                     city2 = temp;
                                 }
                                 if(city1 != null && city2 != null) {
-
-                                    //System.out.println(listGraph);
                                     if(listGraph.getEdgeBetween(city1, city2) == null){
                                         listGraph.connect(city1, city2, edgeName, weight);
 
@@ -188,7 +181,6 @@ public class Main extends Application {
 
                                         pane.getChildren().add(line);
                                     }
-                                    System.out.println("Created connection between " + city1 + " and " + city2);
                                     break;
                                 }
                             }
@@ -239,7 +231,30 @@ public class Main extends Application {
     class FindPathHandler implements EventHandler<ActionEvent> {
         @Override
         public void handle(ActionEvent actionEvent) {
-            Alert alert = new Alert(Alert.AlertType.ERROR, "FindPathHandler");
+            if(cityFrom == null || cityTo == null){
+                Alert alert = new Alert(Alert.AlertType.ERROR, "Error!");
+                alert.setContentText("Two places must be selected!");
+                alert.showAndWait();
+                return;
+            }
+
+            List<Edge<City>> path = listGraph.getPath(cityFrom, cityTo);
+            if(path == null){
+                Alert alert = new Alert(Alert.AlertType.ERROR, "Error!");
+                alert.setContentText("There is no path between these two nodes!");
+                alert.showAndWait();
+                return;
+            }
+            Alert alert = new Alert(Alert.AlertType.INFORMATION, "Message");
+            alert.setHeaderText("The path from " + cityFrom.getName() + " to " + cityTo.getName());
+            StringBuilder sb = new StringBuilder();
+            int total = 0;
+            for(Edge t : path){
+                sb.append("to " + t.getDestination() + " by " + t.getName() + " takes " + t.getWeight() + "\n");
+                total += t.getWeight();
+            }
+            sb.append("Total " + total);
+            alert.setContentText(sb.toString());
             alert.showAndWait();
         }
     }
@@ -247,8 +262,33 @@ public class Main extends Application {
     class ShowConnectionHandler implements EventHandler<ActionEvent> {
         @Override
         public void handle(ActionEvent actionEvent) {
-            Alert alert = new Alert(Alert.AlertType.ERROR, "ShowConnectionHandler");
-            alert.showAndWait();
+            if(cityFrom == null || cityTo == null){
+                Alert alert = new Alert(Alert.AlertType.ERROR, "Error!");
+                alert.setContentText("Two places must be selected!");
+                alert.showAndWait();
+                return;
+            }
+
+            if(listGraph.getEdgeBetween(cityFrom, cityTo) == null){
+                Alert alert = new Alert(Alert.AlertType.ERROR, "Error!");
+                alert.setContentText("These two nodes does not have a connection!");
+                alert.showAndWait();
+                return;
+            }
+
+            NewConnectionDialog dialog = new NewConnectionDialog();
+            dialog.setHeaderText("Connection from " + cityFrom.getName() + " to " + cityTo.getName());
+
+            nameField.setEditable(false);
+            timeField.setEditable(false);
+            Edge edge = listGraph.getEdgeBetween(cityFrom, cityTo);
+            nameField.setText(edge.getName());
+            timeField.setText(Integer.toString(edge.getWeight()));
+
+            Optional<ButtonType> result = dialog.showAndWait();
+            if (result.isPresent() && result.get() != ButtonType.OK){
+                return;
+            }
         }
     }
 
@@ -257,47 +297,147 @@ public class Main extends Application {
         public void handle(ActionEvent actionEvent) {
             scene.setCursor(Cursor.CROSSHAIR);
             newPlaceBtn.setDisable(true);
-            scene.setOnMouseClicked(createCityHandler);
-
+            pane.setOnMouseClicked(createCityHandler);
         }
     }
 
     class NewConnectionHandler implements EventHandler<ActionEvent> {
         @Override
         public void handle(ActionEvent actionEvent) {
-            Alert alert = new Alert(Alert.AlertType.ERROR, "NewConnectionHandler");
-            alert.showAndWait();
+            if(cityFrom == null || cityTo == null){
+                Alert alert = new Alert(Alert.AlertType.ERROR, "Error!");
+                alert.setContentText("Two places must be selected!");
+                alert.showAndWait();
+                return;
+            }
+
+            if(listGraph.getEdgeBetween(cityFrom, cityTo) == null){
+                try {
+                    NewConnectionDialog dialog = new NewConnectionDialog();
+                    Optional<ButtonType> result = dialog.showAndWait();
+                    if (result.isPresent() && result.get() != ButtonType.OK)
+                        return;
+                    String namn = dialog.getName();
+                    int time = dialog.getTime();
+
+                    // Kontrollera att namn fältet har text och tid fältet endast har siffror
+                    if(namn.length() < 1){
+                        Alert alert = new Alert(Alert.AlertType.ERROR, "Error!");
+                        alert.setContentText("Please enter a name!");
+                        alert.showAndWait();
+                        return;
+                    }
+
+                    // Skapa new connection
+                    listGraph.connect(cityFrom, cityTo, namn, time);
+
+                    // Skapa linje
+                    Line line = new Line(cityFrom.getxCordinate(), cityFrom.getyCordinate(), cityTo.getxCordinate(), cityTo.getyCordinate());
+                    line.setFill(Color.BLACK);
+                    line.setStrokeWidth(3);
+                    line.setDisable(true);
+                    pane.getChildren().add(line);
+                } catch (NumberFormatException e) {
+                    Alert alert = new Alert(Alert.AlertType.ERROR, "Error!");
+                    alert.setContentText("Please enter a time to create a connection!");
+                    alert.showAndWait();
+                }
+            } else{
+                Alert alert = new Alert(Alert.AlertType.ERROR, "Error!");
+                alert.setContentText("These two nodes already have a connection!");
+                alert.showAndWait();
+            }
+        }
+    }
+
+    class NewConnectionDialog extends Alert{
+        public NewConnectionDialog() {
+            super(AlertType.CONFIRMATION);
+
+            nameField = new TextField();
+            timeField = new TextField();
+            GridPane grid = new GridPane();
+            grid.setAlignment(Pos.CENTER);
+            grid.setPadding(new Insets(10));
+            grid.setHgap(5);
+            grid.setVgap(10);
+            grid.addRow(0, new Label("Name:"), nameField);
+            grid.addRow(1, new Label("Time:"), timeField);
+            setHeaderText(null);
+            getDialogPane().setContent(grid);
+        }
+        public String getName() {
+            return nameField.getText();
+        }
+        public int getTime() {
+            return Integer.parseInt(timeField.getText());
         }
     }
 
     class ChangeConnectionHandler implements EventHandler<ActionEvent> {
         @Override
         public void handle(ActionEvent actionEvent) {
-            Alert alert = new Alert(Alert.AlertType.ERROR, "ChangeConnectionHandler");
-            alert.showAndWait();
+            if(cityFrom == null || cityTo == null){
+                Alert alert = new Alert(Alert.AlertType.ERROR, "Error!");
+                alert.setContentText("Two places must be selected!");
+                alert.showAndWait();
+                return;
+            }
+
+            if(listGraph.getEdgeBetween(cityFrom, cityTo) == null){
+                Alert alert = new Alert(Alert.AlertType.ERROR, "Error!");
+                alert.setContentText("These two nodes does not have a connection!");
+                alert.showAndWait();
+                return;
+            }
+            try {
+                Edge edge1 = listGraph.getEdgeBetween(cityFrom, cityTo);
+                Edge edge2 = listGraph.getEdgeBetween(cityTo, cityFrom);
+                NewConnectionDialog dialog = new NewConnectionDialog();
+                nameField.setText(edge1.getName());
+                nameField.setEditable(false);
+                Optional<ButtonType> result = dialog.showAndWait();
+                if (result.isPresent() && result.get() != ButtonType.OK)
+                    return;
+                int time = dialog.getTime();
+
+                edge1.setWeight(time);
+                edge2.setWeight(time);
+            } catch (NumberFormatException e) {
+                Alert alert = new Alert(Alert.AlertType.ERROR, "Error!");
+                alert.setContentText("Please enter a time to create a connection!");
+                alert.showAndWait();
+            }
         }
     }
 
     class CreateCityHandler implements EventHandler<MouseEvent> {
         @Override
         public void handle(MouseEvent event) {
-            System.out.println(event.getX());
-            System.out.println(event.getY());
-            // Skapa cirkel
-            Circle circleForCity = new Circle();
-            circleForCity.setCenterX(event.getX());
-            circleForCity.setCenterY(event.getY());
-            circleForCity.setRadius(10.0f);
-            circleForCity.setFill(Color.BLUE);
+            // Skapa dialog
+            TextInputDialog dialog = new TextInputDialog("");
+            dialog.setTitle("Name");
+            dialog.setContentText("Name of place");
+            Optional<String> result = dialog.showAndWait();
+            if (result.isPresent()){
+                // Skapa label
+                Label label = new Label(result.get());
+                label.setLayoutX(event.getX() - 10);
+                label.setLayoutY(event.getY() + 10);
 
-            // Skapa label
-            Label label = new Label("Test");
-            label.setLayoutX(event.getX() - 10);
-            label.setLayoutY(event.getY() + 10);
+                City city = new City(result.get(), event.getX(), event.getY());
+                city.setOnMouseClicked(new MakeCityClickable());
+                listGraph.add(city);
 
-            // Lägg till label och cirkel i pane
-            pane.getChildren().add(label);
-            pane.getChildren().add(circleForCity);
+                // Lägg till label och cirkel i pane
+                pane.getChildren().add(label);
+                pane.getChildren().add(city);
+
+                // Gå tbx till normal stage
+                scene.setCursor(Cursor.DEFAULT);
+                newPlaceBtn.setDisable(false);
+                pane.setOnMouseClicked(null);
+            }
         }
     }
 
@@ -305,6 +445,31 @@ public class Main extends Application {
     ///////////////////////////////////////
     //////////// Help methods /////////////
     ///////////////////////////////////////
+    class MakeCityClickable implements EventHandler<MouseEvent> {
+        @Override
+        public void handle(MouseEvent mouseEvent) {
+            City city = (City)mouseEvent.getSource();
+            if(city.getFill() == Color.BLUE){
+                // Inte markerad
+                if(cityFrom == null){
+                    cityFrom = city;
+                    city.setFill(Color.RED);
+                } else if(cityTo == null){
+                    cityTo = city;
+                    city.setFill(Color.RED);
+                }
+            } else{
+                if(cityFrom == city){
+                    city.setFill(Color.BLUE);
+                    cityFrom = null;
+                } else if(cityTo == city){
+                    city.setFill(Color.BLUE);
+                    cityTo = null;
+                }
+            }
+        }
+    };
+
     private boolean hasUnsavedChanges(){
         if(imageView == null){
             return false;
@@ -325,6 +490,19 @@ public class Main extends Application {
 
         stage.setWidth(mapWidth);
         stage.setHeight(mapHeight);
+
+        // Resetta alla värden
+        cityFrom = null;
+        cityTo = null;
+        pane.getChildren().clear();
+
+        Set set = listGraph.getNodes();
+
+        Iterator<City> itr = set.iterator();
+
+        while (itr.hasNext()) {
+            listGraph.remove(itr.next());
+        }
 
         return imageView;
     }
