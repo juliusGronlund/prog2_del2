@@ -58,7 +58,6 @@ public class PathFinder extends Application {
 
         // Create menu from help method createMenu()
         VBox vboxMenu = createMenu();
-        vboxMenu.setId("menuFile");
         HBox hboxButtons = createButtonPane();
 
         // Create BorderPanes for layout
@@ -80,6 +79,7 @@ public class PathFinder extends Application {
         scene = new Scene(root);
         stage.setScene(scene);
         stage.setTitle("PathFinder");
+        stage.setOnCloseRequest(new CloseHandler());
         stage.show();
     }
 
@@ -91,10 +91,11 @@ public class PathFinder extends Application {
     class NewMapHandler implements EventHandler<ActionEvent> {
         @Override
         public void handle(ActionEvent actionEvent) {
-            imageView = createMap();
+            imageView = createMap("file:europa.gif");
             pane.getChildren().add(imageView);
             root.setCenter(pane);
             changeButtonCondition(false);
+            hasUnsavedChanges = true;
         }
     }
 
@@ -116,9 +117,6 @@ public class PathFinder extends Application {
                 FileReader fr = new FileReader(file);
                 BufferedReader br = new BufferedReader(fr);
 
-                imageView = createMap();
-                pane.getChildren().add(imageView);
-                root.setCenter(pane);
                 changeButtonCondition(false);
 
                 String data;
@@ -130,7 +128,9 @@ public class PathFinder extends Application {
                     nodeInfo = data.split(";");
 
                     if(lineCounter == 0){
-                        // Här säger vi vilken fil
+                        imageView = createMap(data);
+                        pane.getChildren().add(imageView);
+                        root.setCenter(pane);
                     }
 
                     if(lineCounter == 1){
@@ -219,33 +219,34 @@ public class PathFinder extends Application {
         public void handle(ActionEvent actionEvent) {
             Set nodes = listGraph.getNodes();
             Iterator<City> nodesIterator = nodes.iterator();
-                try {
-                    File file = new File("/home/gustavwalter/Documents/prog2_del2/src/europa.graph");
-                    FileWriter myWriter = new FileWriter(file);
-                    myWriter.write("file:" + file.getName() + "\n");
+            try {
+                File file = new File("/home/gustavwalter/Documents/prog2_del2/src/europa.graph");
+                FileWriter myWriter = new FileWriter(file);
+                myWriter.write("file:europa.gif\n");
 
-                    // Create nodes on line 2
-                    while(nodesIterator.hasNext()) {
-                        City city = nodesIterator.next();
-                        myWriter.write(city.getName() + ";" + city.getxCordinate() + ";" + city.getyCordinate() + ";");
-                    }
-
-                    // Get edges and create them
-                    myWriter.write("\n");
-
-                    nodesIterator = nodes.iterator();
-                    while(nodesIterator.hasNext()) {
-                        City city = nodesIterator.next();
-                        Collection<Edge<City>> edges = listGraph.getEdgesFrom(city);
-                        for(Edge edge : edges){
-                            myWriter.write(city.getName() + ";" + edge.getDestination() + ";" + edge.getName() + ";" + edge.getWeight() + "\n");
-                        }
-                    }
-
-                    myWriter.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
+                // Create nodes on line 2
+                while(nodesIterator.hasNext()) {
+                    City city = nodesIterator.next();
+                    myWriter.write(city.getName() + ";" + city.getxCordinate() + ";" + city.getyCordinate() + ";");
                 }
+
+                // Get edges and create them
+                myWriter.write("\n");
+
+                nodesIterator = nodes.iterator();
+                while(nodesIterator.hasNext()) {
+                    City city = nodesIterator.next();
+                    Collection<Edge<City>> edges = listGraph.getEdgesFrom(city);
+                    for(Edge edge : edges){
+                        myWriter.write(city.getName() + ";" + edge.getDestination() + ";" + edge.getName() + ";" + edge.getWeight() + "\n");
+                    }
+                }
+                hasUnsavedChanges = false;
+
+                myWriter.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -255,7 +256,7 @@ public class PathFinder extends Application {
             try {
                 WritableImage screenShot = root.snapshot(null, null);
                 BufferedImage bufferedScreenShot = SwingFXUtils.fromFXImage(screenShot, null);
-                ImageIO.write(bufferedScreenShot, "png", new File("src/capture.png"));
+                ImageIO.write(bufferedScreenShot, "png", new File("capture.png"));
             } catch(IOException ioe) {
                 Alert ioImageAlert = new Alert(Alert.AlertType.ERROR, "IO-error!" + ioe.getMessage());
                 ioImageAlert.showAndWait();
@@ -280,6 +281,27 @@ public class PathFinder extends Application {
         }
     }
 
+    class CloseHandler implements EventHandler<WindowEvent>{
+        @Override public void handle(WindowEvent event){
+            if (hasUnsavedChanges) {
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setContentText("Osparade ändringar. Avsluta ändå?");
+                Optional<ButtonType> res = alert.showAndWait();
+                if (res.isPresent() && res.get().equals(ButtonType.CANCEL)) {
+                    event.consume();
+                }  else {
+                    event.consume();
+                    stage.close();
+                    return;
+                }
+            }  else {
+                event.consume();
+                stage.close();
+                return;
+            }
+        }
+    }
+
     class FindPathHandler implements EventHandler<ActionEvent> {
         @Override
         public void handle(ActionEvent actionEvent) {
@@ -297,8 +319,6 @@ public class PathFinder extends Application {
                 alert.showAndWait();
                 return;
             }
-            Alert alert = new Alert(Alert.AlertType.INFORMATION, "Message");
-            alert.setHeaderText("The path from " + cityFrom.getName() + " to " + cityTo.getName());
             StringBuilder sb = new StringBuilder();
             int total = 0;
             for(Edge t : path){
@@ -306,8 +326,8 @@ public class PathFinder extends Application {
                 total += t.getWeight();
             }
             sb.append("Total " + total);
-            alert.setContentText(sb.toString());
-            alert.showAndWait();
+            FindPathDialog dialog = new FindPathDialog(sb.toString(), "The path from " + cityFrom.getName() + " to " + cityTo.getName());
+            dialog.showAndWait();
         }
     }
 
@@ -406,7 +426,7 @@ public class PathFinder extends Application {
     }
 
     class NewConnectionDialog extends Alert{
-         NewConnectionDialog() {
+        NewConnectionDialog() {
             super(AlertType.CONFIRMATION);
 
             nameField = new TextField();
@@ -426,6 +446,16 @@ public class PathFinder extends Application {
         }
         public int getTime() {
             return Integer.parseInt(timeField.getText());
+        }
+    }
+
+    class FindPathDialog extends Alert{
+        private TextArea text = new TextArea();
+        FindPathDialog(String path, String header) {
+            super(AlertType.CONFIRMATION);
+            super.setHeaderText(header);
+            text.setText(path);
+            getDialogPane().setContent(text);
         }
     }
 
@@ -530,7 +560,7 @@ public class PathFinder extends Application {
         }
     }
 
-    private ImageView createMap(){
+    private ImageView createMap(String fileName){
         double rootHeight = root.getHeight();
         Image map = new Image("file:///home/gustavwalter/Documents/prog2_del2/src/europa.gif");
         imageView = new ImageView(map);
@@ -565,6 +595,7 @@ public class PathFinder extends Application {
         vboxMenu.getChildren().add(menuBar);
 
         Menu archiveMenu = new Menu("File");
+        archiveMenu.setId("menuFile");
         menuBar.getMenus().add(archiveMenu);
 
         MenuItem newMapItem = new MenuItem("New Map");
