@@ -27,7 +27,7 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.*;
 
-public class Main extends Application {
+public class PathFinder extends Application {
     // Global variables available to all classes
     private Stage stage;
     private BorderPane root;
@@ -46,13 +46,12 @@ public class Main extends Application {
     private City cityTo;
     private TextField nameField;
     private TextField timeField;
+    private boolean hasUnsavedChanges;
 
     @Override
     public void start(Stage stage) throws Exception {
         createCityHandler = new CreateCityHandler();
         listGraph = new ListGraph();
-        pane = new Pane();
-        pane.setId("outputArea");
 
         // Move stage to global variable
         this.stage = stage;
@@ -66,6 +65,10 @@ public class Main extends Application {
         this.root = new BorderPane();
         this.top = new BorderPane();
 
+        pane = new Pane();
+        root.setCenter(pane);
+        pane.setId("outputArea");
+
         // Fill top BorderPane with components
         top.setTop(vboxMenu);
         top.setCenter(hboxButtons);
@@ -76,6 +79,7 @@ public class Main extends Application {
         // Mandatory code for start
         scene = new Scene(root);
         stage.setScene(scene);
+        stage.setTitle("PathFinder");
         stage.show();
     }
 
@@ -91,14 +95,22 @@ public class Main extends Application {
             pane.getChildren().add(imageView);
             root.setCenter(pane);
             changeButtonCondition(false);
-
         }
     }
 
 
-    class OpenHandler implements EventHandler<ActionEvent> {
+    class OpenHandler implements EventHandler<ActionEvent>{
         @Override
         public void handle(ActionEvent actionEvent) {
+            if (hasUnsavedChanges) {
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setContentText("Osparade ändringar. Avsluta ändå?");
+                Optional<ButtonType> res = alert.showAndWait();
+                if (res.isPresent() && res.get().equals(ButtonType.CANCEL)) {
+                    actionEvent.consume();
+                    return;
+                }
+            }
             try{
                 File file = new File("/home/gustavwalter/Documents/prog2_del2/src/europa.graph");
                 FileReader fr = new FileReader(file);
@@ -125,19 +137,19 @@ public class Main extends Application {
                         // Här skapar vi städerna
                         for(int i = 0; i < nodeInfo.length; i = i+3){
                             String stad = nodeInfo[i];
-                            double xCordinate = Double.parseDouble(nodeInfo[i+1]);
-                            double yCordinate = Double.parseDouble(nodeInfo[i+2]);
+                            double xcordinate = Double.parseDouble(nodeInfo[i+1]);
+                            double ycordinate = Double.parseDouble(nodeInfo[i+2]);
 
                             // Skapa staden
-                            City city = new City(stad, xCordinate, yCordinate);
+                            City city = new City(stad, xcordinate, ycordinate);
                             city.setId(city.getName());
                             city.setOnMouseClicked(new MakeCityClickable());
                             listGraph.add(city);
 
                             // Skapa label
                             Label label = new Label(stad);
-                            label.setLayoutX(xCordinate - 10);
-                            label.setLayoutY(yCordinate + 10);
+                            label.setLayoutX(xcordinate - 10);
+                            label.setLayoutY(ycordinate + 10);
 
                             // Lägg till label och cirkel i pane
                             pane.getChildren().add(label);
@@ -189,8 +201,8 @@ public class Main extends Application {
                         }
                     }
                     lineCounter++;
+                    hasUnsavedChanges = false;
                 }
-
 
 
             } catch (FileNotFoundException e) {
@@ -252,8 +264,19 @@ public class Main extends Application {
     }
 
     class ExitHandler implements EventHandler<ActionEvent>{
-        @Override public void handle(ActionEvent event){
-            stage.fireEvent(new WindowEvent(stage, WindowEvent.WINDOW_CLOSE_REQUEST));
+        @Override public void handle(ActionEvent actionEvent){
+            if (hasUnsavedChanges) {
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setContentText("Osparade ändringar. Avsluta ändå?");
+                Optional<ButtonType> res = alert.showAndWait();
+                if (res.isPresent() && res.get().equals(ButtonType.CANCEL)) {
+                    actionEvent.consume();
+                }  else {
+                    stage.fireEvent(new WindowEvent(stage, WindowEvent.WINDOW_CLOSE_REQUEST));
+                }
+            }  else {
+                stage.fireEvent(new WindowEvent(stage, WindowEvent.WINDOW_CLOSE_REQUEST));
+            }
         }
     }
 
@@ -327,6 +350,7 @@ public class Main extends Application {
             scene.setCursor(Cursor.CROSSHAIR);
             newPlaceBtn.setDisable(true);
             pane.setOnMouseClicked(createCityHandler);
+            hasUnsavedChanges = true;
         }
     }
 
@@ -366,6 +390,8 @@ public class Main extends Application {
                     line.setStrokeWidth(3);
                     line.setDisable(true);
                     pane.getChildren().add(line);
+
+                    hasUnsavedChanges = true;
                 } catch (NumberFormatException e) {
                     Alert alert = new Alert(Alert.AlertType.ERROR, "Error!");
                     alert.setContentText("Please enter a time to create a connection!");
@@ -380,7 +406,7 @@ public class Main extends Application {
     }
 
     class NewConnectionDialog extends Alert{
-        public NewConnectionDialog() {
+         NewConnectionDialog() {
             super(AlertType.CONFIRMATION);
 
             nameField = new TextField();
@@ -432,6 +458,8 @@ public class Main extends Application {
 
                 edge1.setWeight(time);
                 edge2.setWeight(time);
+
+                hasUnsavedChanges = true;
             } catch (NumberFormatException e) {
                 Alert alert = new Alert(Alert.AlertType.ERROR, "Error!");
                 alert.setContentText("Please enter a time to create a connection!");
@@ -467,6 +495,8 @@ public class Main extends Application {
                 scene.setCursor(Cursor.DEFAULT);
                 newPlaceBtn.setDisable(false);
                 pane.setOnMouseClicked(null);
+
+                hasUnsavedChanges = true;
             }
         }
     }
@@ -497,14 +527,6 @@ public class Main extends Application {
                     cityTo = null;
                 }
             }
-        }
-    };
-
-    private boolean hasUnsavedChanges(){
-        if(imageView == null){
-            return false;
-        } else{
-            return true;
         }
     }
 
